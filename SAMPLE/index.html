@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login & Register with Supabase</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #121212;
+      color: #f1f1f1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 40px;
+    }
+    input, button {
+      padding: 10px;
+      margin: 5px;
+      border-radius: 8px;
+      border: none;
+      font-size: 1em;
+    }
+    button {
+      background-color: #00c2ff;
+      color: white;
+      cursor: pointer;
+    }
+    .container {
+      margin-bottom: 40px;
+      padding: 20px;
+      border: 1px solid #333;
+      border-radius: 12px;
+      width: 300px;
+      text-align: center;
+    }
+    h2 {
+      color: #00c2ff;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container" id="register-section">
+    <h2>Register</h2>
+    <input id="reg-email" type="email" placeholder="Email" /><br />
+    <input id="reg-pass" type="password" placeholder="Password" /><br />
+    <button onclick="register()">Register</button>
+  </div>
+
+  <div class="container" id="login-section">
+    <h2>Login</h2>
+    <input id="log-email" type="email" placeholder="Email" /><br />
+    <input id="log-pass" type="password" placeholder="Password" /><br />
+    <button onclick="login()">Login</button>
+  </div>
+
+  <div class="container" id="dashboard" style="display: none;">
+    <h2>Welcome!</h2>
+    <p>You are logged in.</p>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <script>
+    // 🔐 Supabase project credentials
+    const SUPABASE_URL = 'https://rwuqdcrrglvjmiqyycaw.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ3dXFkY3JyZ2x2am1pcXl5Y2F3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5NDAxNzYsImV4cCI6MjA2NzUxNjE3Nn0.zxXVV2rYy4e2ySKrpiNy1uoESRiuUzcDLVDmoUVYA-Q';
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Check session on load and handle email confirmation
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        showDashboard();
+      }
+    });
+
+    // Handle email confirmation callback
+    window.addEventListener('DOMContentLoaded', async () => {
+      const url = new URL(window.location.href);
+      const type = url.searchParams.get('type');
+      const access_token = url.searchParams.get('access_token');
+
+      if (type === 'signup' && access_token) {
+        try {
+          // Confirm the user's email
+          const { data, error } = await supabase.auth.getUser(access_token);
+          if (error) {
+            alert('Email confirmation failed: ' + error.message);
+          } else {
+            alert('Email confirmed! You can now log in.');
+            // Clear the URL parameters
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+        } catch (error) {
+          alert('Email confirmation failed: ' + error.message);
+        }
+      }
+    });
+
+    async function register() {
+      const email = document.getElementById("reg-email").value;
+      const password = document.getElementById("reg-pass").value;
+
+      const { data, error } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          emailRedirectTo: window.location.origin + window.location.pathname
+        }
+      });
+
+      if (error) {
+        alert("❌ Registration failed: " + error.message);
+      } else {
+        alert("✅ Registered! Please check your email to confirm.");
+      }
+    }
+
+    async function login() {
+      const email = document.getElementById("log-email").value;
+      const password = document.getElementById("log-pass").value;
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        alert("❌ Login failed: " + error.message);
+      } else {
+        alert("✅ Logged in!");
+        showDashboard();
+      }
+    }
+
+    async function logout() {
+      await supabase.auth.signOut();
+      alert("Logged out.");
+      showLogin();
+    }
+
+    function showDashboard() {
+      document.getElementById("dashboard").style.display = "block";
+      document.getElementById("register-section").style.display = "none";
+      document.getElementById("login-section").style.display = "none";
+    }
+
+    function showLogin() {
+      document.getElementById("dashboard").style.display = "none";
+      document.getElementById("register-section").style.display = "block";
+      document.getElementById("login-section").style.display = "block";
+    }
+  </script>
+
+</body>
+</html>
